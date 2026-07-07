@@ -25,6 +25,11 @@ const CAL_BARS = ['0200.png', '0201.png', '0202.png', '0203.png', '0204.png', '0
 const PULSE_BARS = ['0206.png', '0207.png', '0208.png', '0209.png', '0210.png', '0211.png']
 const DIST_BARS = ['0212.png', '0213.png', '0214.png', '0215.png', '0216.png', '0217.png']
 const STEP_BARS = ['0218.png', '0219.png', '0220.png', '0221.png', '0222.png', '0223.png']
+// Day-of-week labels, ordered Monday→Sunday: index 0=MO (0026) … 6=SU (0032).
+// Driven manually from Time.getDay() (see updateDate()) because the firmware's
+// data_type.WEEK binding renders every day but Sunday — the value it feeds the
+// IMG_LEVEL for Sunday falls outside this array. getDay() is the documented
+// JS convention (0=SU … 6=SA), so we map it ourselves.
 const WEEK_IMG = ['0026.png', '0027.png', '0028.png', '0029.png', '0030.png', '0031.png', '0032.png']
 const WEATHER_IMG = Array.from({ length: 27 }, (_, i) => `${(79 + i).toString().padStart(4, '0')}.png`)
 const VAULT_FRAMES = ['0057.png', '0058.png', '0059.png', '0060.png', '0061.png', '0062.png', '0063.png', '0064.png']
@@ -73,10 +78,8 @@ WatchFace({
     // ---- Background ----
     hmUI.createWidget(hmUI.widget.IMG, { x: 0, y: 0, w: 480, h: 480, src: '0000.png' })
 
-    // ---- Day of week (auto-bound) ----
-    hmUI.createWidget(hmUI.widget.IMG_LEVEL, {
-      x: 150, y: 24, image_array: WEEK_IMG, image_length: 7, type: hmUI.data_type.WEEK,
-    })
+    // ---- Day of week (manual; see WEEK_IMG note) ----
+    this._weekImg = hmUI.createWidget(hmUI.widget.IMG, { x: 150, y: 24, src: WEEK_IMG[0] })
 
     // ---- Date DD.MM.YYYY: per-digit IMGs, refreshed from the Time sensor ----
     this._dateImgs = DATE_X.map((x) =>
@@ -216,6 +219,10 @@ WatchFace({
     for (let i = 0; i < this._dateImgs.length; i++) {
       this._dateImgs[i].setProperty(hmUI.prop.SRC, DATE_FONT[Number(seq[i])])
     }
+    // Day of week: Time.getDay() is the JS convention (0=SU … 6=SA); WEEK_IMG is
+    // ordered MO→SU, so map (getDay()+6)%7 (SU→6, MO→0, …, SA→5).
+    const weekIdx = (timeSensor.getDay() + 6) % 7
+    this._weekImg.setProperty(hmUI.prop.SRC, WEEK_IMG[weekIdx])
   },
 
   onDestroy() {
