@@ -8,29 +8,31 @@ import {
 
 // ---- Asset groups (in assets/balance2/, referenced by bare name) ----
 const DATE_FONT = [
-  '0011.png', '0012.png', '0013.png', '0014.png', '0015.png',
-  '0016.png', '0017.png', '0018.png', '0019.png', '0020.png',
+  'digit_small_0.png', 'digit_small_1.png', 'digit_small_2.png', 'digit_small_3.png', 'digit_small_4.png',
+  'digit_small_5.png', 'digit_small_6.png', 'digit_small_7.png', 'digit_small_8.png', 'digit_small_9.png',
 ]
 const BIG_TIME = [
-  '0001.png', '0002.png', '0003.png', '0004.png', '0005.png',
-  '0006.png', '0007.png', '0008.png', '0009.png', '0010.png',
+  'time_digit_0.png', 'time_digit_1.png', 'time_digit_2.png', 'time_digit_3.png', 'time_digit_4.png',
+  'time_digit_5.png', 'time_digit_6.png', 'time_digit_7.png', 'time_digit_8.png', 'time_digit_9.png',
 ]
 const METRIC_FONT = [
-  '0069.png', '0070.png', '0071.png', '0072.png', '0073.png',
-  '0074.png', '0075.png', '0076.png', '0077.png', '0078.png',
+  'digit_bold_0.png', 'digit_bold_1.png', 'digit_bold_2.png', 'digit_bold_3.png', 'digit_bold_4.png',
+  'digit_bold_5.png', 'digit_bold_6.png', 'digit_bold_7.png', 'digit_bold_8.png', 'digit_bold_9.png',
 ]
 // Gauge fill sprites, level 0 (empty, frame only) → 5 (full). Driven as plain IMG src swaps.
-const CAL_BARS = ['0200.png', '0201.png', '0202.png', '0203.png', '0204.png', '0205.png']
-const PULSE_BARS = ['0206.png', '0207.png', '0208.png', '0209.png', '0210.png', '0211.png']
-const DIST_BARS = ['0212.png', '0213.png', '0214.png', '0215.png', '0216.png', '0217.png']
-const STEP_BARS = ['0218.png', '0219.png', '0220.png', '0221.png', '0222.png', '0223.png']
-// Day-of-week labels, ordered Monday→Sunday: index 0=MO (0026) … 6=SU (0032).
+const CAL_BARS = ['gauge_cal_0.png', 'gauge_cal_1.png', 'gauge_cal_2.png', 'gauge_cal_3.png', 'gauge_cal_4.png', 'gauge_cal_5.png']
+const PULSE_BARS = ['gauge_pulse_0.png', 'gauge_pulse_1.png', 'gauge_pulse_2.png', 'gauge_pulse_3.png', 'gauge_pulse_4.png', 'gauge_pulse_5.png']
+const DIST_BARS = ['gauge_dist_0.png', 'gauge_dist_1.png', 'gauge_dist_2.png', 'gauge_dist_3.png', 'gauge_dist_4.png', 'gauge_dist_5.png']
+const STEP_BARS = ['gauge_steps_0.png', 'gauge_steps_1.png', 'gauge_steps_2.png', 'gauge_steps_3.png', 'gauge_steps_4.png', 'gauge_steps_5.png']
+// Day-of-week labels, ordered Monday→Sunday: index 0=Monday (day_mon.png) … 6=Sunday (day_sun.png).
 // Driven manually from Time.getDay() (see updateDate()) because the firmware's
 // data_type.WEEK binding renders every day but Sunday — the value it feeds the
 // IMG_LEVEL for Sunday falls outside this array. getDay() is the documented
 // JS convention (0=SU … 6=SA), so we map it ourselves.
-const WEEK_IMG = ['0026.png', '0027.png', '0028.png', '0029.png', '0030.png', '0031.png', '0032.png']
-const WEATHER_IMG = Array.from({ length: 27 }, (_, i) => `${(79 + i).toString().padStart(4, '0')}.png`)
+const WEEK_IMG = ['day_mon.png', 'day_tue.png', 'day_wed.png', 'day_thu.png', 'day_fri.png', 'day_sat.png', 'day_sun.png']
+// Weather condition icon per hmUI.data_type.WEATHER_CURRENT index; the firmware doesn't
+// document what each index depicts, so these stay numbered rather than guessed.
+const WEATHER_IMG = Array.from({ length: 27 }, (_, i) => `weather_${String(i).padStart(2, '0')}.png`)
 // Vault Boy walk: firmware-driven IMG_ANIM over frames pipboy_0.png … pipboy_7.png.
 
 // Date digits sit at these absolute x positions (snug to the baked separator dots), y=78.
@@ -74,14 +76,14 @@ const GAUGES = [
 WatchFace({
   build() {
     // ---- Background ----
-    hmUI.createWidget(hmUI.widget.IMG, { x: 0, y: 0, w: 480, h: 480, src: '0000.png' })
+    hmUI.createWidget(hmUI.widget.IMG, { x: 0, y: 0, w: 480, h: 480, src: 'background.png' })
 
     // ---- Day of week (manual; see WEEK_IMG note) ----
     this._weekImg = hmUI.createWidget(hmUI.widget.IMG, { x: 150, y: 24, src: WEEK_IMG[0] })
 
     // ---- Date DD.MM.YYYY: per-digit IMGs, refreshed from the Time sensor ----
     this._dateImgs = DATE_X.map((x) =>
-      hmUI.createWidget(hmUI.widget.IMG, { x, y: 78, src: '0011.png' })
+      hmUI.createWidget(hmUI.widget.IMG, { x, y: 78, src: 'digit_small_0.png' })
     )
 
     // ---- Weather icon + temperature (auto-bound) ----
@@ -90,9 +92,9 @@ WatchFace({
     })
     hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: 338, y: 78, w: 56, h: 24, font_array: DATE_FONT, h_space: -3,
-      negative_image: '0021.png', align_h: hmUI.align.RIGHT, type: hmUI.data_type.WEATHER_CURRENT,
+      negative_image: 'minus.png', align_h: hmUI.align.RIGHT, type: hmUI.data_type.WEATHER_CURRENT,
     })
-    hmUI.createWidget(hmUI.widget.IMG, { x: 394, y: 78, src: '0023.png' }) // degree °
+    hmUI.createWidget(hmUI.widget.IMG, { x: 394, y: 78, src: 'degree.png' }) // degree °
 
     // ---- Vault Boy (firmware-driven sprite animation: IMG_ANIM over pipboy_0..7) ----
     // Native widget = the firmware cycles the frames; no manual timer (robust on Balance 2,
@@ -122,7 +124,7 @@ WatchFace({
     })
     hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: 8, y: 277, w: 80, h: 24, font_array: METRIC_FONT, h_space: -3,
-      dot_image: '0034.png', align_h: hmUI.align.RIGHT, type: hmUI.data_type.DISTANCE,
+      dot_image: 'decimal_point.png', align_h: hmUI.align.RIGHT, type: hmUI.data_type.DISTANCE,
     })
     hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: 195, y: 369, w: 96, h: 24, font_array: METRIC_FONT, h_space: -3,
@@ -140,12 +142,12 @@ WatchFace({
       x: 74, y: 379, w: 58, h: 24, font_array: METRIC_FONT, h_space: -3,
       align_h: hmUI.align.RIGHT, type: hmUI.data_type.BATTERY,
     })
-    hmUI.createWidget(hmUI.widget.IMG, { x: 132, y: 379, src: '0035.png' })
+    hmUI.createWidget(hmUI.widget.IMG, { x: 132, y: 379, src: 'percent.png' })
 
     // ---- Status icons (auto-bound) ----
-    hmUI.createWidget(hmUI.widget.IMG_STATUS, { x: 312, y: 368, src: '0054.png', type: hmUI.system_status.DISCONNECT })
-    hmUI.createWidget(hmUI.widget.IMG_STATUS, { x: 351, y: 368, src: '0052.png', type: hmUI.system_status.LOCK })
-    hmUI.createWidget(hmUI.widget.IMG_STATUS, { x: 405, y: 366, src: '0055.png', type: hmUI.system_status.CLOCK })
+    hmUI.createWidget(hmUI.widget.IMG_STATUS, { x: 312, y: 368, src: 'icon_disconnect.png', type: hmUI.system_status.DISCONNECT })
+    hmUI.createWidget(hmUI.widget.IMG_STATUS, { x: 351, y: 368, src: 'icon_lock.png', type: hmUI.system_status.LOCK })
+    hmUI.createWidget(hmUI.widget.IMG_STATUS, { x: 405, y: 366, src: 'icon_alarm.png', type: hmUI.system_status.CLOCK })
 
     // ---- Tap-to-launch shortcuts (invisible overlays; created last so they capture touches) ----
     const tapZone = (x, y, w, h, appId) =>

@@ -68,25 +68,25 @@ Coordinates are in the 480-px design space, straight from `watchface/index.js`.
 
 | Element | Widget | `type` / binding | Asset(s) | x, y (w×h) |
 |---------|--------|------------------|----------|------------|
-| Background | `IMG` | — | `0000` | 0,0 (480×480) |
-| Day of week | `IMG_LEVEL` | `WEEK` | `0026`–`0032` | 150,24 |
-| Date digits (DD MM YYYY) | 8× `IMG` | sensor-driven | `0011`–`0020` | 82–179, 78 |
-| Weather icon | `IMG_LEVEL` | `WEATHER_CURRENT` | `0079`–`0105` (27) | 330,78 |
-| Temperature value | `TEXT_IMG` | `WEATHER_CURRENT` | `0011`–`0020`, neg `0021` | 338,78 (56×24), align RIGHT |
-| Degree ° | `IMG` | — | `0023` | 394,78 |
-| Vault Boy | `IMG_ANIM` (firmware-driven) | `anim_prefix:'pipboy'`, 8 fps | `pipboy_0`–`pipboy_7` | 186,130 |
-| Time HH / MM / SS | `IMG_TIME` | autonomous | HH·MM `0001`–`0010`; SS `0011`–`0020` | 328,132 / 328,246 / 371,348 |
-| Calories | `TEXT_IMG` | `CAL` | `0069`–`0078` | 17,149 (72×24), align RIGHT |
-| Pulse | `TEXT_IMG` | `HEART` | `0069`–`0078` | 15,216 (58×24), align RIGHT |
-| Distance | `TEXT_IMG` | `DISTANCE` | `0069`–`0078`, dot `0034` | 8,277 (80×24), align RIGHT |
-| Steps | `TEXT_IMG` | `STEP` | `0069`–`0078` | 195,369 (96×24), align CENTER_H |
-| Calories gauge | `IMG` (src-swapped) | Calorie sensor | `0200`–`0205` | 90,159 |
-| Pulse gauge | `IMG` (src-swapped) | HeartRate sensor | `0206`–`0211` | 73,224 |
-| Distance gauge | `IMG` (src-swapped) | Distance sensor | `0212`–`0217` | 90,286 |
-| Steps gauge | `IMG` (src-swapped) | Step sensor | `0218`–`0223` | 194,349 |
-| Battery value | `TEXT_IMG` | `BATTERY` | `0069`–`0078` | 74,379 (58×24), align RIGHT |
-| Battery % | `IMG` | — | `0035` | 132,379 |
-| Disconnect / Lock / Alarm | 3× `IMG_STATUS` | `DISCONNECT`/`LOCK`/`CLOCK` | `0054`/`0052`/`0055` | 312/351/405, ~367 |
+| Background | `IMG` | — | `background.png` | 0,0 (480×480) |
+| Day of week | `IMG` (manual; firmware's `WEEK` binding drops Sunday) | `Time.getDay()` | `day_mon.png`–`day_sun.png` | 150,24 |
+| Date digits (DD MM YYYY) | 8× `IMG` | sensor-driven | `digit_small_0.png`–`digit_small_9.png` | 82–179, 78 |
+| Weather icon | `IMG_LEVEL` | `WEATHER_CURRENT` | `weather_00.png`–`weather_26.png` (27) | 330,78 |
+| Temperature value | `TEXT_IMG` | `WEATHER_CURRENT` | `digit_small_0.png`–`digit_small_9.png`, neg `minus.png` | 338,78 (56×24), align RIGHT |
+| Degree ° | `IMG` | — | `degree.png` | 394,78 |
+| Vault Boy | `IMG_ANIM` (firmware-driven) | `anim_prefix:'pipboy'`, 8 fps | `pipboy_0.png`–`pipboy_7.png` | 186,130 |
+| Time HH / MM / SS | `IMG_TIME` | autonomous | HH·MM `time_digit_0.png`–`time_digit_9.png`; SS `digit_small_0.png`–`digit_small_9.png` | 328,132 / 328,246 / 371,348 |
+| Calories | `TEXT_IMG` | `CAL` | `digit_bold_0.png`–`digit_bold_9.png` | 17,149 (72×24), align RIGHT |
+| Pulse | `TEXT_IMG` | `HEART` | `digit_bold_0.png`–`digit_bold_9.png` | 15,216 (58×24), align RIGHT |
+| Distance | `TEXT_IMG` | `DISTANCE` | `digit_bold_0.png`–`digit_bold_9.png`, dot `decimal_point.png` | 8,277 (80×24), align RIGHT |
+| Steps | `TEXT_IMG` | `STEP` | `digit_bold_0.png`–`digit_bold_9.png` | 195,369 (96×24), align CENTER_H |
+| Calories gauge | `IMG` (src-swapped) | Calorie sensor | `gauge_cal_0.png`–`gauge_cal_5.png` | 90,159 |
+| Pulse gauge | `IMG` (src-swapped) | HeartRate sensor | `gauge_pulse_0.png`–`gauge_pulse_5.png` | 73,224 |
+| Distance gauge | `IMG` (src-swapped) | Distance sensor | `gauge_dist_0.png`–`gauge_dist_5.png` | 90,286 |
+| Steps gauge | `IMG` (src-swapped) | Step sensor | `gauge_steps_0.png`–`gauge_steps_5.png` | 194,349 |
+| Battery value | `TEXT_IMG` | `BATTERY` | `digit_bold_0.png`–`digit_bold_9.png` | 74,379 (58×24), align RIGHT |
+| Battery % | `IMG` | — | `percent.png` | 132,379 |
+| Disconnect / Lock / Alarm | 3× `IMG_STATUS` | `DISCONNECT`/`LOCK`/`CLOCK` | `icon_disconnect.png`/`icon_lock.png`/`icon_alarm.png` | 312/351/405, ~367 |
 
 The four metric gauges are plain **`IMG`** widgets whose `src` is swapped to the right 6-level
 fill sprite in `updateGauges()` — the same proven `IMG` + `setProperty(hmUI.prop.SRC, …)` path the

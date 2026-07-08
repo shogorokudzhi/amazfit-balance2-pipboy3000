@@ -168,7 +168,7 @@ transparent, 1–255 opaque). This is what the firmware expects and keeps the pa
 These are controlled by the watch's settings, not by the face, so don't expect to "fix" them in
 layout:
 - **Temperature unit** (°C/°F) and **distance unit** (km/mi) follow the watch locale; the
-  distance **decimal point** (`dot_image: '0034.png'`) shows or not depending on the unit.
+  distance **decimal point** (`dot_image: 'decimal_point.png'`) shows or not depending on the unit.
 - **AM/PM** is only meaningful in 12-hour mode (finding #4); it's hidden in 24-hour mode.
 
 ---
