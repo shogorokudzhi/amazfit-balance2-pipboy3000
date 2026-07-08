@@ -39,9 +39,9 @@ const WEATHER_IMG = Array.from({ length: 27 }, (_, i) => `weather_${String(i).pa
 const DATE_X = [82, 94, 111, 123, 143, 155, 167, 179]
 
 // Gauge full-scale references (fallbacks when a sensor goal isn't available).
-const CAL_GOAL = 300       // fallback active-kcal goal
-const STEP_GOAL = 8000     // fallback step goal
-const DIST_FULL_M = 10000  // distance bar full at ~10 km
+const CAL_GOAL = 300       // fallback + sanity-check reference active-kcal goal
+const STEP_GOAL = 8000     // fallback + sanity-check reference step goal
+const DIST_FULL_M = 10000  // distance bar full at 10 km (Distance.getCurrent() is meters-scaled)
 const HR_MIN = 40          // pulse bar maps linearly over [HR_MIN, HR_MAX]
 const HR_MAX = 180
 
@@ -64,13 +64,18 @@ const gaugeLevel = (frac, n) => {
   return Math.max(0, Math.min(max, Math.round((frac || 0) * max)))
 }
 
+// Cheap defensive clamp on getTarget() — confirmed accurate on this device in testing (see
+// ZEPPOS-FINDINGS.md #14) but kept as insurance against a future bad read.
+const sanityGoal = (target, fallback) =>
+  (target > fallback * 0.25 && target < fallback * 4) ? target : fallback
+
 // Each gauge: position, its fill sprites (empty→full), and how to read its 0..1 fraction.
 // Same source as the displayed number, so the bar always tracks what the user reads.
 const GAUGES = [
-  { x: 90, y: 159, bars: CAL_BARS, frac: () => calSensor.getCurrent() / (calSensor.getTarget() || CAL_GOAL) },
+  { x: 90, y: 159, bars: CAL_BARS, frac: () => calSensor.getCurrent() / sanityGoal(calSensor.getTarget(), CAL_GOAL) },
   { x: 73, y: 224, bars: PULSE_BARS, frac: () => ((hrSensor.getCurrent() || hrSensor.getLast() || 0) - HR_MIN) / (HR_MAX - HR_MIN) },
   { x: 90, y: 286, bars: DIST_BARS, frac: () => distSensor.getCurrent() / DIST_FULL_M },
-  { x: 194, y: 349, bars: STEP_BARS, frac: () => stepSensor.getCurrent() / (stepSensor.getTarget() || STEP_GOAL) },
+  { x: 194, y: 349, bars: STEP_BARS, frac: () => stepSensor.getCurrent() / sanityGoal(stepSensor.getTarget(), STEP_GOAL) },
 ]
 
 WatchFace({

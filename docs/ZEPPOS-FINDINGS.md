@@ -297,6 +297,60 @@ broken build.)
 
 ---
 
+## 14. Reading gauge sprites correctly, and confirming sensor units with a debug overlay
+
+**Symptom:** The activity gauges (calories, distance, steps) looked wrong/inconsistent at a
+glance — bars didn't seem to track the real metric, and it wasn't obvious which direction
+"filled" even meant.
+
+**The gauge fill sprites are not a simple 0%/20%/40%/60%/80%/100% linear ramp.** Pixel-measuring
+all 6 levels of a gauge sprite set (e.g. `gauge_steps_*.png`) shows level 0 already has a visible
+~20% filled sliver rather than a fully empty frame (levels measured at roughly
+20/35/50/75/88/100% filled). At-a-glance this can look "off" even when the underlying math is
+correct — e.g. 58.7% real progress (level 3 of 5) renders as ~75% filled, which reads as "more
+filled than I expected" for barely-past-halfway progress. **Before assuming the math is wrong,
+pixel-check the actual sprite fill % per level** (crop each level, flatten onto a solid
+background, measure the opaque-region width) rather than eyeballing a live render.
+
+The sprites originally filled **right-to-left** (green anchored to the right edge, growing
+leftward) — confusing, since it reads backwards from the conventional left-to-right progress bar.
+Fixed by horizontally flipping all 24 gauge PNGs (`magick <file> -flop <file>`) — a pure asset
+change, no code changes needed, since the frame border is a symmetric rectangle.
+
+**When a sensor's units/reliability are in doubt, don't guess — add a temporary on-screen debug
+readout.** Two rounds of guessing `Distance.getCurrent()`'s unit (meters? kilometers?) from
+visual symptoms alone were both wrong in different directions. The reliable fix: temporarily add
+a plain `hmUI.widget.TEXT` widget (system font, arbitrary string — no bitmap font array needed,
+much simpler than this face's usual `TEXT_IMG` pattern) printing the raw
+`getCurrent()`/`getTarget()` values, install once, and read the real numbers directly:
+```js
+hmUI.createWidget(hmUI.widget.TEXT, {
+  x: 0, y: 190, w: 480, h: 140,  // vertically centered — see bezel-clipping note below
+  color: 0xff3333, text_size: 20, align_h: hmUI.align.CENTER_H, align_v: hmUI.align.CENTER_V,
+  text_style: hmUI.text_style.WRAP, text: '...',
+})
+```
+Confirmed real values: `ST 4698/8000`, `CAL 158/300`, `DIST 3492`, `HR 65/68`. This settled both
+open questions at once:
+- **`Step.getTarget()`/`Calorie.getTarget()` returned exactly the configured goals** (`8000`,
+  `300`) — no evidence of unreliability. An earlier hypothesis that they return implausible
+  values (based on a since-resolved misreading of the sprite fill %, above) was wrong. A
+  sanity-clamp (`sanityGoal()`, only trust `getTarget()` within `0.25×`–`4×` the local fallback
+  constant) is kept as cheap insurance, but isn't compensating for a confirmed bug.
+- **`Distance.getCurrent()` is in meters**, not kilometers: `3492 / 4698 steps ≈ 0.74 m/step` — a
+  textbook-normal stride length. (If it were km, that's ~743 m/step — physically impossible.) An
+  earlier "maybe kilometers" guess was wrong and briefly regressed the gauge to always-full
+  (`3492 / 10 = 349.2`, clamped to max level) instead of the original always-near-empty symptom.
+
+**Bezel-clipping gotcha for the debug widget itself:** an early version of this debug text sat at
+`y:5` (near the top of the round 480×480 screen) as one long single line — the visible chord width
+that close to the edge is only ~97px, not the full 480px box, so most of the line got clipped by
+the bezel and only a middle fragment survived. Centering vertically (`y` near the screen's true
+center) and splitting into separate lines fixed it — see finding #1 for the general
+`align_h`/box-width lesson this is a round-screen variant of.
+
+---
+
 ## Meta-lesson
 
 The Balance 2 firmware diverges from both the simulator and a naïve static renderer in several

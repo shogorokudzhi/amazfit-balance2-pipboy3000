@@ -263,7 +263,7 @@ function collectWidgets(folder) {
   // Mock activity sensors so build()'s updateGauges() produces representative levels.
   class Step { getCurrent() { return 4000 } getTarget() { return 8000 } onChange() {} offChange() {} }
   class Calorie { getCurrent() { return 150 } getTarget() { return 300 } onChange() {} offChange() {} }
-  class Distance { getCurrent() { return 3000 } onChange() {} offChange() {} }
+  class Distance { getCurrent() { return 3000 } onChange() {} offChange() {} } // meters (see ZEPPOS-FINDINGS.md #14)
   class HeartRate { getCurrent() { return 90 } getLast() { return 90 } }
   const MODS = {
     '@zos/ui': hmUI,

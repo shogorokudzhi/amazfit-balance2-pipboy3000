@@ -91,12 +91,14 @@ Coordinates are in the 480-px design space, straight from `watchface/index.js`.
 The four metric gauges are plain **`IMG`** widgets whose `src` is swapped to the right 6-level
 fill sprite in `updateGauges()` — the same proven `IMG` + `setProperty(hmUI.prop.SRC, …)` path the
 date digits use, so the bar **always renders** (every sprite incl. level 0 has the green border —
-never a black box). The level comes from `@zos/sensor` (the same data the numbers show): Cal & Steps
-`current/getTarget()`, Distance `current/DIST_FULL_M` (~10 km full), Pulse linear over `[40,180]`;
-`level = clamp(round(frac*5), 0, 5)`. Refreshed on each sensor's `onChange` + the 60 s timer.
-Requires the `data:user.hd.{step,calorie,distance,heart_rate}` permissions in `app.json`.
-(`IMG_LEVEL` was abandoned: `type:STEP` can't be shared by two gauges — left Distance/Steps as
-black boxes — and a type-less `IMG_LEVEL` proved unreliable on-device.)
+never a black box). The level comes from `@zos/sensor` (the same data the numbers show): Cal &
+Steps `current/sanityGoal(getTarget(), GOAL_CONST)` (`getTarget()` confirmed accurate on this
+device in testing — the clamp is cheap insurance, not a workaround for a known bug — see finding
+#14), Distance `current/DIST_FULL_M` (`getCurrent()` confirmed **meters**-scaled — also finding
+#14), Pulse linear over `[40,180]`; `level = clamp(round(frac*5), 0, 5)`. Refreshed on each
+sensor's `onChange` + the 60 s timer. Requires the `data:user.hd.{step,calorie,distance,heart_rate}` permissions in
+`app.json`. (`IMG_LEVEL` was abandoned: `type:STEP` can't be shared by two gauges — left
+Distance/Steps as black boxes — and a type-less `IMG_LEVEL` proved unreliable on-device.)
 
 ## Tap-to-launch shortcuts
 
