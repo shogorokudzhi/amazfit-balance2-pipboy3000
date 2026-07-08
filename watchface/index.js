@@ -100,7 +100,7 @@ WatchFace({
     // Native widget = the firmware cycles the frames; no manual timer (robust on Balance 2,
     // where the old getScreenType-gated timer froze — see docs/ZEPPOS-FINDINGS.md #13).
     hmUI.createWidget(hmUI.widget.IMG_ANIM, {
-      x: 186, y: 130,
+      x: 185, y: 120,
       anim_path: '', anim_prefix: 'pipboy', anim_ext: 'png',
       anim_fps: 8, anim_size: 8, anim_repeat: true, repeat_count: 255,
       anim_status: hmUI.anim_status.START,
