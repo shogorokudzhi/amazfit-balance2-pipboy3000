@@ -27,8 +27,8 @@ re-authoring as `@zos` source — see finding #11 in [ZEPPOS-FINDINGS.md](ZEPPOS
 
 ```js
 WatchFace({
-  build()        { /* create every widget; register sensor onChange + a WIDGET_DELEGATE; onResume() */ },
-  onResume()     { /* (re)start the refresh + Vault Boy timers — skips the walk in AOD */ },
+  build()        { /* create every widget (incl. the firmware-driven Vault Boy IMG_ANIM); register sensor onChange + a WIDGET_DELEGATE; onResume() */ },
+  onResume()     { /* (re)start the refresh timer */ },
   onPause()      { /* stop the timers while the face is hidden (battery) */ },
   updateGauges() { /* set each gauge IMG's src from its sensor fraction */ },
   updateDate()   { /* refresh the per-digit date from the Time sensor */ },
@@ -38,21 +38,25 @@ WatchFace({
 
 `build()` creates every widget once. Most widgets **auto-update from system data** via their
 `type: hmUI.data_type.*` binding — no JS needed for time, metric *numbers*, weather, battery, or
-day-of-week. Three things are imperative:
+day-of-week. Two things are imperative; Vault Boy's walk is firmware-driven and needs neither:
 
 | Driver | What it does |
 |--------|--------------|
 | `updateDate()` | Reads `Time.getDate()/getMonth()/getFullYear()`, zero-pads to `DDMMYYYY`, sets each of the 8 per-digit date `IMG`s' `SRC` (`0011`–`0020`). Per-digit (not `IMG_DATE`) keeps the digits pixel-aligned to the baked separator dots. |
 | `updateGauges()` | For each of the 4 gauges (a data-driven `GAUGES` table), reads its sensor fraction, maps to a 0–5 level, and sets the gauge `IMG`'s `SRC` to that fill sprite. Runs on sensor `onChange` + the refresh timer. |
-| Vault Boy timer (200 ms) | Cycles the Vault Boy `IMG`'s `SRC` through the 8 frames `0057`–`0064`. |
 
-**Lifecycle / battery.** The refresh timer (60 s, drives `updateDate`+`updateGauges`) and the
-200 ms Vault Boy timer are created in `onResume()` and stopped in `onPause()` via a
-`WIDGET_DELEGATE` (`resume_call`/`pause_call`), so they don't run while the face is hidden;
-`onResume()` is also called once at the end of `build()` so the first paint/animation doesn't wait
-on the first resume event (idempotent via a `_running` guard). The walk animation is **skipped in
-AOD** (`getScreenType() === SCREEN_TYPE_AOD`). Risky sensor/router calls are wrapped in a small
-`safe()` helper.
+Vault Boy is a native `hmUI.widget.IMG_ANIM` (`anim_prefix: 'pipboy'`, frames `pipboy_0.png`–
+`pipboy_7.png`, `anim_fps: 8`, looping) — the **firmware** cycles the frames and handles
+visibility, so there's no JS timer, no `resume_call`/`pause_call` bookkeeping, and no
+`getScreenType()` dependency for it at all (an earlier manual-timer version gated the walk on
+`getScreenType() === SCREEN_TYPE_AOD`, which misreports AOD during normal rendering on this
+device and froze the animation — see finding #13 in [ZEPPOS-FINDINGS.md](ZEPPOS-FINDINGS.md)).
+
+**Lifecycle / battery.** The refresh timer (60 s, drives `updateDate`+`updateGauges`) is created
+in `onResume()` and stopped in `onPause()` via a `WIDGET_DELEGATE` (`resume_call`/`pause_call`),
+so it doesn't run while the face is hidden; `onResume()` is also called once at the end of
+`build()` so the first paint doesn't wait on the first resume event (idempotent via a `_running`
+guard). Risky sensor/router calls are wrapped in a small `safe()` helper.
 
 Everything else (`IMG_TIME` hour/minute/second, the metric `TEXT_IMG`s, weather, battery,
 `IMG_STATUS` icons) is declarative and bound by `data_type`/`system_status`. The four gauge bars
@@ -70,7 +74,7 @@ Coordinates are in the 480-px design space, straight from `watchface/index.js`.
 | Weather icon | `IMG_LEVEL` | `WEATHER_CURRENT` | `0079`–`0105` (27) | 330,78 |
 | Temperature value | `TEXT_IMG` | `WEATHER_CURRENT` | `0011`–`0020`, neg `0021` | 338,78 (56×24), align RIGHT |
 | Degree ° | `IMG` | — | `0023` | 394,78 |
-| Vault Boy | `IMG` (animated) | 200 ms timer | `0057`–`0064` | 195,130 |
+| Vault Boy | `IMG_ANIM` (firmware-driven) | `anim_prefix:'pipboy'`, 8 fps | `pipboy_0`–`pipboy_7` | 186,130 |
 | Time HH / MM / SS | `IMG_TIME` | autonomous | HH·MM `0001`–`0010`; SS `0011`–`0020` | 328,132 / 328,246 / 371,348 |
 | Calories | `TEXT_IMG` | `CAL` | `0069`–`0078` | 17,149 (72×24), align RIGHT |
 | Pulse | `TEXT_IMG` | `HEART` | `0069`–`0078` | 15,216 (58×24), align RIGHT |
@@ -86,7 +90,7 @@ Coordinates are in the 480-px design space, straight from `watchface/index.js`.
 
 The four metric gauges are plain **`IMG`** widgets whose `src` is swapped to the right 6-level
 fill sprite in `updateGauges()` — the same proven `IMG` + `setProperty(hmUI.prop.SRC, …)` path the
-Vault Boy uses, so the bar **always renders** (every sprite incl. level 0 has the green border —
+date digits use, so the bar **always renders** (every sprite incl. level 0 has the green border —
 never a black box). The level comes from `@zos/sensor` (the same data the numbers show): Cal & Steps
 `current/getTarget()`, Distance `current/DIST_FULL_M` (~10 km full), Pulse linear over `[40,180]`;
 `level = clamp(round(frac*5), 0, 5)`. Refreshed on each sensor's `onChange` + the 60 s timer.
@@ -122,13 +126,14 @@ mrc209 reference faces).
 
 `node preview.js [out]` composites the face to a 480×480 image locally (round-clipped, with mock
 data) so the layout can be checked **before flashing a watch**. Default output `preview.png`; an
-output ending in `.gif` renders an **animated GIF** (the Vault Boy walk — 8 frames @ 200 ms;
-optional 2nd arg = frame count). It's a zero-dependency Node script (built-in `zlib` only — no
-npm install): it **executes** `watchface/index.js` under mocked `@zos` modules to capture the
-real `createWidget(...)` specs (and timer callbacks, for animation frames), and decodes/encodes
-the PNGs — and the GIF (GIF89a + LZW) — itself. An approximation of firmware rendering — good
-for position/presence, not a substitute for the device on data-driven fields. For a live
-preview, `zeus preview` against the Zepp OS Simulator / a paired device.
+output ending in `.gif` renders an **animated GIF** (the Vault Boy walk cycling `pipboy_0`–
+`pipboy_7`; optional 2nd arg = frame count). It's a zero-dependency Node script (built-in `zlib`
+only — no npm install): it **executes** `watchface/index.js` under mocked `@zos` modules to
+capture the real `createWidget(...)` specs (`IMG_ANIM` frames are driven by the GIF frame index,
+since the firmware — not a JS timer — cycles them on-device), and decodes/encodes the PNGs — and
+the GIF (GIF89a + LZW) — itself. An approximation of firmware rendering — good for
+position/presence, not a substitute for the device on data-driven fields. For a live preview,
+`zeus preview` against the Zepp OS Simulator / a paired device.
 
 ## Origin
 

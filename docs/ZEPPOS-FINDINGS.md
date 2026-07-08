@@ -251,20 +251,44 @@ names usable with the legacy `hmApp.startApp({ url, native: true })` (e.g. `Sett
 
 ---
 
-## 13. Pause animations off-screen + skip them in AOD (battery / burn-in)
+## 13. Don't gate a walk-cycle timer on `getScreenType()` — use `IMG_ANIM` instead
 
-A free-running animation timer (here the 200 ms Vault Boy walk) keeps firing even when the
-watchface is hidden or the screen is in always-on display — wasting battery and risking OLED
-burn-in. Best practice:
+**Symptom:** The Vault Boy figure rendered on its first frame and never moved, while the
+date/gauge refresh (a separate, ungated timer) kept working fine.
 
-- Register a **`WIDGET_DELEGATE`** with `resume_call`/`pause_call`; create the repeating timers in
-  `resume_call` and `stopTimer()` them in `pause_call` (and `onDestroy`), so they only run while
-  the face is actually shown.
-- Also call your resume logic **once at the end of `build()`** so the first paint/animation doesn't
-  wait on the first resume event — guard it (`if (this._running) return`) so it's idempotent if
-  `resume_call` then fires.
-- **Skip the animation in AOD:** `import { getScreenType, SCREEN_TYPE_AOD } from '@zos/display'`
-  and don't advance frames when `getScreenType() === SCREEN_TYPE_AOD`.
+**Cause:** An earlier version tried to save battery by skipping the walk in AOD:
+```js
+import { getScreenType, SCREEN_TYPE_AOD } from '@zos/display'
+...
+if (!this._vaultTimer && safe(() => getScreenType()) !== SCREEN_TYPE_AOD) {
+  this._vaultTimer = createTimer(...)
+}
+```
+On the Balance 2, `getScreenType()` **reports `SCREEN_TYPE_AOD` during normal (non-AOD)
+rendering too** — the two constants aren't even declared in `@zos/display`'s type defs
+(`node_modules/@zeppos/device-types`), confirming it's an unreliable/undocumented API on this
+device. So the condition is false at the exact moment `resume_call` would create the timer, the
+timer is never created, and the figure freezes on its first frame forever.
+
+**Fix — use the native `IMG_ANIM` widget, not a JS timer:**
+```js
+hmUI.createWidget(hmUI.widget.IMG_ANIM, {
+  x, y,
+  anim_path: '', anim_prefix: 'pipboy', anim_ext: 'png',
+  anim_fps: 8, anim_size: 8, anim_repeat: true, repeat_count: 255,
+  anim_status: hmUI.anim_status.START,
+})
+```
+It loads frames `<anim_prefix>_<0..anim_size-1>.<anim_ext>` (here `pipboy_0.png`…`pipboy_7.png`),
+plays them at `anim_fps`, and the **firmware** handles frame cycling and screen-visibility
+pausing — no `createTimer`, no `resume_call`/`pause_call` bookkeeping, and no dependency on
+`getScreenType()` at all. Robust on the Balance 2 where the manual-timer approach above was not.
+
+For anything that genuinely does need a manual per-frame timer (not a simple looping sprite),
+the safer battery/AOD pattern is still: register a **`WIDGET_DELEGATE`** with
+`resume_call`/`pause_call`, create the repeating timer in `resume_call`, `stopTimer()` it in
+`pause_call`/`onDestroy` — but skip any `getScreenType()`-based AOD gating on this device; it
+doesn't reliably distinguish AOD from normal rendering.
 
 Keep the static one-shot paint (date/gauges) in `build()` so the face is correct immediately even
 before the first resume. (For maximum robustness wrap sensor/router/timer calls in a tiny

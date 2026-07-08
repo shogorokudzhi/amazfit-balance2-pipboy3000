@@ -231,7 +231,7 @@ function collectWidgets(folder) {
   const hmUI = {
     widget: nameProxy(), data_type: nameProxy(), align: nameProxy(),
     system_status: nameProxy(), show_level: nameProxy(), text_style: nameProxy(),
-    prop: nameProxy(),
+    prop: nameProxy(), anim_status: nameProxy(),
     createWidget(type, props) {
       const w = {
         type,
@@ -280,11 +280,16 @@ function collectWidgets(folder) {
 }
 
 // ---------------------------------------------------------------- render one frame
-function renderFrame(widgets) {
+function renderFrame(widgets, frame = 0) {
   const canvas = makeCanvas(480, 480)
   for (const { type, props } of widgets) {
     if (type === 'IMG' || type === 'IMG_STATUS') {
       if (props.src) alphaComposite(canvas, load(props.src), props.x || 0, props.y || 0)
+    } else if (type === 'IMG_ANIM') {
+      // Firmware-cycled sprite animation; pick the frame for this preview step.
+      const n = props.anim_size || 1
+      const src = `${props.anim_prefix}_${frame % n}.${props.anim_ext || 'png'}`
+      alphaComposite(canvas, load(src), props.x || 0, props.y || 0)
     } else if (type === 'IMG_LEVEL') {
       const ia = props.image_array || []
       if (!ia.length) continue
@@ -456,8 +461,8 @@ function main(folder, out, frameCount) {
     const FRAMES = frameCount || 8
     const frames = []
     for (let i = 0; i < FRAMES; i++) {
-      frames.push(renderFrame(widgets).data)
-      for (const cb of timers) { try { cb() } catch (e) {} } // advance the Vault Boy walk
+      frames.push(renderFrame(widgets, i).data) // frame index drives the Vault Boy IMG_ANIM cycle
+      for (const cb of timers) { try { cb() } catch (e) {} }
     }
     fs.writeFileSync(out, encodeGif(480, 480, frames, 200))
     console.log('wrote', out, `(${FRAMES} frames)`)

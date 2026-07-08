@@ -1,7 +1,6 @@
 import * as hmUI from '@zos/ui'
 import { Time, Step, Calorie, Distance, HeartRate } from '@zos/sensor'
 import { createTimer, stopTimer } from '@zos/timer'
-import { getScreenType, SCREEN_TYPE_AOD } from '@zos/display'
 import {
   launchApp, SYSTEM_APP_STATUS, SYSTEM_APP_HR, SYSTEM_APP_WEATHER,
   SYSTEM_APP_CALENDAR, SYSTEM_APP_ALARM, SYSTEM_APP_COUNTDOWN,
@@ -32,7 +31,7 @@ const STEP_BARS = ['0218.png', '0219.png', '0220.png', '0221.png', '0222.png', '
 // JS convention (0=SU … 6=SA), so we map it ourselves.
 const WEEK_IMG = ['0026.png', '0027.png', '0028.png', '0029.png', '0030.png', '0031.png', '0032.png']
 const WEATHER_IMG = Array.from({ length: 27 }, (_, i) => `${(79 + i).toString().padStart(4, '0')}.png`)
-const VAULT_FRAMES = ['0057.png', '0058.png', '0059.png', '0060.png', '0061.png', '0062.png', '0063.png', '0064.png']
+// Vault Boy walk: firmware-driven IMG_ANIM over frames pipboy_0.png … pipboy_7.png.
 
 // Date digits sit at these absolute x positions (snug to the baked separator dots), y=78.
 const DATE_X = [82, 94, 111, 123, 143, 155, 167, 179]
@@ -44,7 +43,6 @@ const DIST_FULL_M = 10000  // distance bar full at ~10 km
 const HR_MIN = 40          // pulse bar maps linearly over [HR_MIN, HR_MAX]
 const HR_MAX = 180
 
-const VAULT_PERIOD = 200    // ms per Vault Boy frame
 const REFRESH_PERIOD = 60000 // ms between date/gauge refreshes
 
 const timeSensor = new Time()
@@ -96,8 +94,15 @@ WatchFace({
     })
     hmUI.createWidget(hmUI.widget.IMG, { x: 394, y: 78, src: '0023.png' }) // degree °
 
-    // ---- Vault Boy (animated; frames cycled by the timer while visible) ----
-    this._vault = hmUI.createWidget(hmUI.widget.IMG, { x: 195, y: 130, src: VAULT_FRAMES[0] })
+    // ---- Vault Boy (firmware-driven sprite animation: IMG_ANIM over pipboy_0..7) ----
+    // Native widget = the firmware cycles the frames; no manual timer (robust on Balance 2,
+    // where the old getScreenType-gated timer froze — see docs/ZEPPOS-FINDINGS.md #13).
+    hmUI.createWidget(hmUI.widget.IMG_ANIM, {
+      x: 186, y: 130,
+      anim_path: '', anim_prefix: 'pipboy', anim_ext: 'png',
+      anim_fps: 8, anim_size: 8, anim_repeat: true, repeat_count: 255,
+      anim_status: hmUI.anim_status.START,
+    })
 
     // ---- Time: hours/minutes (big) + seconds (small), auto-bound ----
     hmUI.createWidget(hmUI.widget.IMG_TIME, {
@@ -176,7 +181,8 @@ WatchFace({
     safe(() => this.onResume())
   },
 
-  // Start the periodic timers + walk cycle (idempotent). Skips the animation in AOD.
+  // Start the periodic refresh timer (idempotent). The Vault Boy walk is firmware-driven
+  // (IMG_ANIM) and needs no manual start/stop.
   onResume() {
     if (this._running) return
     this._running = true
@@ -188,21 +194,12 @@ WatchFace({
         this.updateGauges()
       })
     }
-    if (!this._vaultTimer && safe(() => getScreenType()) !== SCREEN_TYPE_AOD) {
-      this._vaultIndex = 0
-      this._vaultTimer = createTimer(0, VAULT_PERIOD, () => {
-        if (safe(() => getScreenType()) === SCREEN_TYPE_AOD) return
-        this._vaultIndex = (this._vaultIndex + 1) % VAULT_FRAMES.length
-        this._vault.setProperty(hmUI.prop.SRC, VAULT_FRAMES[this._vaultIndex])
-      })
-    }
   },
 
-  // Stop the timers when the face is hidden (saves battery; no animation off-screen).
+  // Stop the refresh timer when the face is hidden (saves battery).
   onPause() {
     this._running = false
     if (this._refreshTimer) { stopTimer(this._refreshTimer); this._refreshTimer = undefined }
-    if (this._vaultTimer) { stopTimer(this._vaultTimer); this._vaultTimer = undefined }
   },
 
   updateGauges() {
