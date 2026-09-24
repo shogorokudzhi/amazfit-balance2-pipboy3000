@@ -1,0 +1,22 @@
+name: Zeus Preview
+
+on:
+  workflow_dispatch:
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Install Zeus CLI
+        run: npm install -g @zeppos/zeus-cli@1.9.3
+
+      - name: Run Zeus Preview
+        run: zeus preview
