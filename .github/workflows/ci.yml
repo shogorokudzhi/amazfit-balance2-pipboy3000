@@ -26,15 +26,15 @@ jobs:
           node-version: '22'
 
       - name: Install Zeus CLI
-        run: npm install -g @zeppos/zeus-cli@^1.9.1
+        run: npm install -g @zeppos/zeus-cli@1.9.3
 
       - name: Syntax check
         run: node --check watchface/index.js && node --check preview.js
 
-      - name: Build with Zeus (compile + pack smoke test)
+      - name: Build with Zeus
         run: zeus build
 
-      - name: Render the local preview (renderer smoke test)
+      - name: Render the local preview
         run: node preview.js preview.ci.png
 
       - name: Upload built package
@@ -44,5 +44,3 @@ jobs:
           path: dist/*.zab
           retention-days: 14
           if-no-files-found: error
-
-      # Triggered intentionally from the fork to verify the Zeus build path.
